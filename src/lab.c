@@ -182,12 +182,14 @@ void buddy_init(struct buddy_pool *pool, size_t size) {
     for (size_t i = 0; i <= kval; i++) {
         pool->avail[i].tag = BLOCK_UNUSED;
         pool->avail[i].kval = i;
-        pool->avail[i].next = NULL;
-        pool->avail[i].prev = NULL;
+        pool->avail[i].next = &pool->avail[i];
+        pool->avail[i].prev = &pool->avail[i];
     }
-    pool->avail[kval].tag = BLOCK_AVAIL;
-    pool->avail[kval].next = &pool->avail[kval];
-    pool->avail[kval].prev = &pool->avail[kval];
+
+    pool->avail[pool->kval_m].next = pool->base;    
+    pool->avail[pool->kval_m].next->tag = BLOCK_AVAIL;
+    pool->avail[pool->kval_m].next->next = &pool->avail[pool->kval_m];
+    pool->avail[pool->kval_m].prev->prev = &pool->avail[pool->kval_m];
 }
 
 void buddy_destroy(struct buddy_pool *pool) {
