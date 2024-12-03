@@ -5,6 +5,9 @@
 #include <errno.h>
 #include "lab.h"
 
+void printBuddyPool(struct buddy_pool *pool);
+void printAvailBlock(struct avail *block);
+
 size_t btok(size_t bytes) {
     unsigned int counter = 0;
     bytes--;
@@ -19,15 +22,22 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
     if (pool == NULL || buddy == NULL) {
         return NULL;
     }
-    size_t block_size = UINT64_C(1) << buddy->kval;
-    uintptr_t buddy_offset = ((uintptr_t) buddy - (uintptr_t) pool->base) ^ block_size;
-    return (struct avail *) ((uintptr_t) pool->base + buddy_offset);
+    uintptr_t buddy_address = (uintptr_t) buddy;
+    uintptr_t upper = UINT64_C(1) << (buddy->kval + 1);
+    if (buddy_address % upper == 0) {
+        return (struct avail *)(buddy_address + (UINT64_C(1) << (buddy->kval)));
+    } else if (buddy_address % upper == UINT64_C(1) << (buddy->kval)) {
+        return (struct avail *)(buddy_address - (UINT64_C(1) << (buddy->kval)));
+    }
+    perror("buddy: buddy_calc had issue!");
+    return NULL; //error
 }
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     // Find block
     unsigned int j = 0;
-    for (j = 0; j <= pool->kval_m; j++) {
+    unsigned int k = btok(size);
+    for (j = k; j <= pool->kval_m; j++) {
         if (pool->avail[j].next != &pool->avail[j]) {
             break;
         }
@@ -43,7 +53,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     P->prev = &pool->avail[j];
     L->tag = BLOCK_RESERVED;
     // Split required?
-    while (j != 0) {
+    while (j != k) {
         // Split
         j--;
         P = L + (UINT64_C(1) << j);
@@ -54,6 +64,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
         pool->avail[j].next = P;
         pool->avail[j].prev = P;
     }
+    //printBuddyPool(pool);
     return L;
 }
 
@@ -68,6 +79,7 @@ void buddy_free(struct buddy_pool *pool, void *ptr) {
         if (k == pool->kval_m || P->tag == BLOCK_RESERVED || (P->tag == BLOCK_AVAIL && P->kval != k)) {
             goto S3;
         }
+        goto S2;
     // combine with buddy
     S2:
         P->prev->next = P->next;
@@ -84,6 +96,7 @@ void buddy_free(struct buddy_pool *pool, void *ptr) {
         L->kval = k;
         L->prev = &pool->avail[k];
         pool->avail[k].next = L;
+    printBuddyPool(pool);
 }
 
 void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size) {
@@ -121,4 +134,30 @@ void buddy_destroy(struct buddy_pool *pool) {
     if (status == -1) {
         perror("buddy: destroying memory failed!");
     }
+}
+
+// Debug Methods
+void printBuddyPool(struct buddy_pool *pool) {
+    for (unsigned int i = 0; i < pool->kval_m; i++) {
+        struct avail *curr = &pool->avail[i];
+        struct avail *first = curr;
+        if (curr != NULL) {
+            do {
+                printf("%p -> ", curr);
+                curr = curr->next;
+            } while (curr != first && curr != NULL);
+        }
+        if (curr == first) {
+            printf("first\n");
+        } else {
+            printf("%p\n", curr);
+        }   
+    }
+}
+
+void printAvailBlock(struct avail *block) {
+    printf("%p\n", block);
+    printf("%hu\n", block->tag);
+    printf("%hu\n", block->kval);
+    printf("\n");
 }
