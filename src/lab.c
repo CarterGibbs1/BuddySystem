@@ -65,13 +65,13 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
         pool->avail[j].prev = P;
     }
     //printBuddyPool(pool);
-    return (void *) L;
+    return (void *)(((struct avail *) L) + 1);
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr) {
 
     if (ptr == NULL) return;
-    struct avail *L = (struct avail *) ptr;
+    struct avail *L = (struct avail *) ptr - 1;
     unsigned short k = L->kval;
     struct avail *P = buddy_calc(pool, L);
 
