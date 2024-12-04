@@ -23,8 +23,8 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
         return NULL;
     }
     uintptr_t buddy_address = (uintptr_t) buddy;
+    //printf("TEST: %hu\n", buddy->kval);
     uintptr_t offset = UINT64_C(1) << buddy->kval;
-    //printf("%ld, %ld\n", buddy_address, (buddy_address ^ offset));
 
     return (struct avail *) (buddy_address ^ offset);
 }
@@ -51,44 +51,50 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     pool->avail[j].next = P;
     P->prev = &pool->avail[j];
     L->tag = BLOCK_RESERVED;
+    printAvailBlock(L);
     // Split required?
     printf("j: %u\n", j);
     while (j != k) {
         // Split
+        L->kval--;
         j--;
-        P = L + (UINT64_C(1) << j);
+        //printf("L:\n");
+        //printAvailBlock(L);
+        P = (struct avail *)(((void *)L) + (UINT64_C(1) << j));
         P->tag = BLOCK_AVAIL;
         P->kval = j;
         P->next = &pool->avail[j];
         P->prev = &pool->avail[j];
         pool->avail[j].next = P;
         pool->avail[j].prev = P;
+        //printf("P:\n");
+        //printAvailBlock(P);
     }
     //printBuddyPool(pool);
     return (void *)(((struct avail *) L) + 1);
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr) {
-
     if (ptr == NULL) return;
-    struct avail *L = (struct avail *) ptr - 1;
+    struct avail *L = ((struct avail *) ptr) - 1;
     unsigned short k = L->kval;
     struct avail *P = buddy_calc(pool, L);
 
     //struct avail *L = (struct avail *) ptr;
     //unsigned short k = L->kval;
     //struct avail *P = buddy_calc(pool, L);
-    printAvailBlock(L);
-    printAvailBlock(P);
+    //printAvailBlock(L);
+    //printAvailBlock(P);
     // Is buddy available?
     while (!(k == pool->kval_m || P->tag == BLOCK_RESERVED || (P->tag == BLOCK_AVAIL && P->kval != k))) {
         // combine with buddy
         P->prev->next = P->next;
         P->next->prev = P->prev;
+        L->kval++;
         k++;
         if (P < L) L = P;
 
-        struct avail *P = buddy_calc(pool, L);
+        P = buddy_calc(pool, L);
     }
     // Put on list
     L->tag = BLOCK_AVAIL;
@@ -98,7 +104,7 @@ void buddy_free(struct buddy_pool *pool, void *ptr) {
     L->kval = k;
     L->prev = &pool->avail[k];
     pool->avail[k].next = L;
-    printBuddyPool(pool);
+    //printBuddyPool(pool);
 }
 
 void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size) {
@@ -158,8 +164,8 @@ void printBuddyPool(struct buddy_pool *pool) {
 }
 
 void printAvailBlock(struct avail *block) {
-    printf("%p\n", block);
-    printf("%hu\n", block->tag);
-    printf("%hu\n", block->kval);
+    printf("addr : %p\n", block);
+    printf("tag  : %hu\n", block->tag);
+    printf("k_val: %hu\n", block->kval);
     printf("\n");
 }
