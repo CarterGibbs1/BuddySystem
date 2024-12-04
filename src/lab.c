@@ -23,20 +23,19 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
         return NULL;
     }
     uintptr_t buddy_address = (uintptr_t) buddy;
-    uintptr_t upper = UINT64_C(1) << (buddy->kval + 1);
-    if (buddy_address % upper == 0) {
-        return (struct avail *)(buddy_address + (UINT64_C(1) << (buddy->kval)));
-    } else if (buddy_address % upper == UINT64_C(1) << (buddy->kval)) {
-        return (struct avail *)(buddy_address - (UINT64_C(1) << (buddy->kval)));
-    }
-    perror("buddy: buddy_calc had issue!");
-    return NULL; //error
+    uintptr_t offset = UINT64_C(1) << buddy->kval;
+    //printf("%ld, %ld\n", buddy_address, (buddy_address ^ offset));
+
+    return (struct avail *) (buddy_address ^ offset);
 }
+
+
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     // Find block
     unsigned int j = 0;
-    unsigned int k = btok(size);
+    unsigned int k = btok(size + sizeof(struct avail));
+    printf("k: %u\n",k);
     for (j = k; j <= pool->kval_m; j++) {
         if (pool->avail[j].next != &pool->avail[j]) {
             break;
@@ -53,6 +52,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     P->prev = &pool->avail[j];
     L->tag = BLOCK_RESERVED;
     // Split required?
+    printf("j: %u\n", j);
     while (j != k) {
         // Split
         j--;
@@ -65,37 +65,39 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
         pool->avail[j].prev = P;
     }
     //printBuddyPool(pool);
-    return L;
+    return (void *) L;
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr) {
+
+    if (ptr == NULL) return;
     struct avail *L = (struct avail *) ptr;
     unsigned short k = L->kval;
     struct avail *P = buddy_calc(pool, L);
-    goto S1;
 
+    //struct avail *L = (struct avail *) ptr;
+    //unsigned short k = L->kval;
+    //struct avail *P = buddy_calc(pool, L);
+    printAvailBlock(L);
+    printAvailBlock(P);
     // Is buddy available?
-    S1:
-        if (k == pool->kval_m || P->tag == BLOCK_RESERVED || (P->tag == BLOCK_AVAIL && P->kval != k)) {
-            goto S3;
-        }
-        goto S2;
-    // combine with buddy
-    S2:
+    while (!(k == pool->kval_m || P->tag == BLOCK_RESERVED || (P->tag == BLOCK_AVAIL && P->kval != k))) {
+        // combine with buddy
         P->prev->next = P->next;
         P->next->prev = P->prev;
         k++;
         if (P < L) L = P;
-        goto S1;
+
+        struct avail *P = buddy_calc(pool, L);
+    }
     // Put on list
-    S3:
-        L->tag = BLOCK_AVAIL;
-        P = pool->avail[k].next;
-        L->next = P;
-        P->prev = L;
-        L->kval = k;
-        L->prev = &pool->avail[k];
-        pool->avail[k].next = L;
+    L->tag = BLOCK_AVAIL;
+    P = pool->avail[k].next;
+    L->next = P;
+    P->prev = L;
+    L->kval = k;
+    L->prev = &pool->avail[k];
+    pool->avail[k].next = L;
     printBuddyPool(pool);
 }
 

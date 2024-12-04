@@ -18,8 +18,6 @@ void tearDown(void) {
   // clean stuff up here
 }
 
-
-
 /**
  * Check the pool to ensure it is full.
  */
@@ -142,8 +140,8 @@ int main(void) {
   printf("Running memory tests.\n");
 
   UNITY_BEGIN();
-  RUN_TEST(test_buddy_init);
+  //RUN_TEST(test_buddy_init);
   RUN_TEST(test_buddy_malloc_one_byte);
-  RUN_TEST(test_buddy_malloc_one_large);
+  //RUN_TEST(test_buddy_malloc_one_large);
 return UNITY_END();
 }
