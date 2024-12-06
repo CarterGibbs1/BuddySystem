@@ -122,7 +122,7 @@ void test_malloc_many_chunks(void)
     size_t pool_size = UINT64_C(1) << TEST_K;
     buddy_init(&pool, pool_size);
 
-    size_t alloc_size = UINT64_C(1) << 20;
+    size_t alloc_size = UINT64_C(1) << (TEST_K - 5);
     size_t num_allocations = 0;
     size_t max_allocations = pool_size / (UINT64_C(1) << btok(alloc_size + sizeof(struct avail)));
 
@@ -362,16 +362,16 @@ int main(void) {
   UNITY_BEGIN();
 
   RUN_TEST(test_buddy_init);
-  //RUN_TEST(test_buddy_malloc_one_byte);
-  //RUN_TEST(test_buddy_malloc_one_large);
-  //RUN_TEST(test_malloc_many_chunks);
-  //RUN_TEST(test_malloc_not_enough_memory);
-  //RUN_TEST(test_free_null_pointer);
-  //RUN_TEST(test_malloc_then_realloc_grow);
-  //RUN_TEST(test_malloc_then_realloc_shrink);
-  //RUN_TEST(test_malloc_zero_size);
-  //RUN_TEST(test_realloc_not_enough_memory);
-  //RUN_TEST(test_realloc_null_pointer);
-  //RUN_TEST(test_realloc_size_0);
+  RUN_TEST(test_buddy_malloc_one_byte);
+  RUN_TEST(test_buddy_malloc_one_large);
+  RUN_TEST(test_malloc_many_chunks);
+  RUN_TEST(test_malloc_not_enough_memory);
+  RUN_TEST(test_free_null_pointer);
+  RUN_TEST(test_malloc_then_realloc_grow);
+  RUN_TEST(test_malloc_then_realloc_shrink);
+  RUN_TEST(test_malloc_zero_size);
+  RUN_TEST(test_realloc_not_enough_memory);
+  RUN_TEST(test_realloc_null_pointer);
+  RUN_TEST(test_realloc_size_0);
 return UNITY_END();
 }
