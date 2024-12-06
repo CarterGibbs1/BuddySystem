@@ -171,6 +171,10 @@ extern "C"
    */
   int myMain(int argc, char** argv);
 
+    // debug methods
+    void printBuddyPool(struct buddy_pool *pool);
+    void printAvailBlock(struct avail *block);
+
 #ifdef __cplusplus
 } //extern "C"
 #endif
