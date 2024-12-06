@@ -15,6 +15,7 @@ size_t btok(size_t bytes) {
     return counter;
 }
 
+/**
 struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
     if (pool == NULL || buddy == NULL) {
         return NULL;
@@ -24,7 +25,32 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
     uintptr_t offset = UINT64_C(1) << buddy->kval;
     return (struct avail *)(buddy_address ^ offset);
 }
+*/
 
+
+struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
+    if (pool == NULL || buddy == NULL) {
+        return NULL;
+    }
+
+    uintptr_t buddy_address = (uintptr_t) buddy;
+    uintptr_t offset = UINT64_C(1) << buddy->kval;
+    uintptr_t address = buddy_address - (uintptr_t) pool->base;
+    uintptr_t index = address ^ offset;
+    return (struct avail *) ((uintptr_t) pool->base + index);
+}
+
+
+/**
+struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy) {
+    intptr_t b = (intptr_t) buddy - (intptr_t) pool->base;
+
+    if (b % (1 << (buddy->kval + 1)) == 0) {
+        return (struct avail *)((b + (1 << buddy->kval)) + (intptr_t) pool->base);
+    }
+    return (struct avail *)((b - (1 << buddy->kval)) + (intptr_t) pool->base);
+}
+*/
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size) {
     if (size == 0 || pool == NULL) {
@@ -62,6 +88,8 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size) {
         //printf("L:\n");
         //printAvailBlock(L);
         P = (struct avail *) ((uintptr_t)L + (UINT64_C(1) << j));
+        intptr_t b = (intptr_t) buddy_calc(pool, L);
+        intptr_t d = b ^ (intptr_t) P;
         P->tag = BLOCK_AVAIL;
         P->kval = j;
         P->next = &pool->avail[j];

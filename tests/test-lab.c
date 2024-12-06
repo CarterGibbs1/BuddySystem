@@ -124,7 +124,7 @@ void test_malloc_many_chunks(void)
 
     size_t alloc_size = UINT64_C(1) << (TEST_K - 5);
     size_t num_allocations = 0;
-    size_t max_allocations = pool_size / (UINT64_C(1) << btok(alloc_size + sizeof(struct avail)));
+    size_t max_allocations = pool_size / (UINT64_C(1) << btok(alloc_size + TEST_K * sizeof(struct avail)));
 
     // this is to keep track of all allocations for easy freeing
     void **allocations = malloc(max_allocations * sizeof(void *));
